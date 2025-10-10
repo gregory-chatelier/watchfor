@@ -23,14 +23,6 @@ It features:
 
 In both modes, if the pattern specified by `-p` is found, `watchman` executes a success command. If the pattern is not found after all retries, it executes a failure command.
 
-## Installation
-
-To install `watchman`, ensure you have Go installed and run:
-
-```bash
-go install github.com/gregory-chatelier/watchman@latest
-```
-
 ## Usage
 
 The command structure is:
