@@ -1,0 +1,109 @@
+package main
+
+import (
+	"context"
+	"fmt"
+	"os"
+	"strings"
+	"time"
+
+	"github.com/spf13/pflag"
+
+	"github.com/gregory-chatelier/watchman/pkg/executor"
+	"github.com/gregory-chatelier/watchman/pkg/poller"
+	"github.com/gregory-chatelier/watchman/pkg/watcher"
+)
+
+var (
+	// Watch Options
+	command = pflag.StringP("command", "c", "", "The command to execute and inspect.")
+	file    = pflag.StringP("file", "f", "", "The path to the file to read and inspect.")
+	pattern = pflag.StringP("pattern", "p", "", "The exact string to search for in the output or file content.")
+
+	// Retry Options
+	interval    = pflag.Duration("interval", 1*time.Second, "The initial interval between polling attempts (e.g., `5s`, `1m`).")
+	maxRetries  = pflag.Int("max-retries", 10, "The maximum number of polling attempts before giving up. `0` means retry forever.")
+	backoff     = pflag.Float64("backoff", 1, "The exponential backoff factor. A factor of `1` disables exponential backoff.")
+	timeout     = pflag.Duration("timeout", 0, "Overall max wait time. Overrides --max-retries. `0` means no timeout.")
+	failCommand = pflag.String("on-fail", "", "The command to execute if the pattern is not found.")
+
+	// General Options
+	verbose = pflag.BoolP("verbose", "v", false, "Enable verbose logging.")
+	help    = pflag.BoolP("help", "h", false, "Show the help message.")
+)
+
+func main() {
+	pflag.Parse()
+
+	if *help {
+		pflag.Usage()
+		os.Exit(0)
+	}
+
+	// --- Argument Validation ---
+	if *command != "" && *file != "" {
+		fmt.Fprintln(os.Stderr, "Error: --command (-c) and --file (-f) cannot be used together.")
+		os.Exit(1)
+	}
+	if *command == "" && *file == "" {
+		fmt.Fprintln(os.Stderr, "Error: either --command (-c) or --file (-f) must be specified.")
+		os.Exit(1)
+	}
+	if *pattern == "" {
+		fmt.Fprintln(os.Stderr, "Error: --pattern (-p) is required.")
+		os.Exit(1)
+	}
+	if *backoff < 1 {
+		fmt.Fprintln(os.Stderr, "Error: --backoff must be >= 1.")
+		os.Exit(1)
+	}
+
+	// The command to execute on success is all args after '--'
+	successCommandArgs := pflag.Args()
+
+	// --- Watcher Selection ---
+	var w watcher.Watcher
+	var err error
+
+	if *command != "" {
+		w = watcher.NewCommandWatcher(*command)
+	} else {
+		w, err = watcher.NewFileWatcher(*file)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error opening file: %v\n", err)
+			os.Exit(1)
+		}
+		if fw, ok := w.(*watcher.FileWatcher); ok {
+			// Since FileWatcher holds an open file handle, we must ensure it's closed.
+			defer fw.Close()
+		}
+	}
+
+	// --- Run the Poller ---
+	poller := poller.New(w, *pattern, *verbose)
+
+	// Create a context for the timeout
+	ctx, cancel := context.WithCancel(context.Background())
+	if *timeout > 0 {
+		ctx, cancel = context.WithTimeout(context.Background(), *timeout)
+	}
+	defer cancel()
+
+	success := poller.Run(ctx, *interval, *maxRetries, *backoff)
+
+	if success {
+		fmt.Println("\n✅ Success: Executing success command.")
+		successCmdStr := strings.Join(successCommandArgs, " ")
+		if err := executor.Execute(successCmdStr); err != nil {
+			fmt.Fprintf(os.Stderr, "Error executing success command: %v\n", err)
+			os.Exit(1)
+		}
+	} else {
+		fmt.Println("\n❌ Failure: Executing fail command.")
+		if err := executor.Execute(*failCommand); err != nil {
+			fmt.Fprintf(os.Stderr, "Error executing fail command: %v\n", err)
+			os.Exit(1)
+		}
+		os.Exit(1) // Exit with a non-zero code on failure
+	}
+}
