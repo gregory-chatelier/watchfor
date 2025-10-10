@@ -10,7 +10,7 @@ set -e
 # --- Configuration ---
 LOG_FILE="demo.log"
 MOCK_SCRIPT="./demo/mock_health_check.sh"
-WATCHMAN_BIN="./watchman.exe" # Adjusted path for Windows
+WATCHMAN_BIN="./dist/watchman-linux-amd64" # Adjusted path for Windows WSL Ubuntu
 
 # Explicitly clean up mock file before starting
 rm -f "/tmp/watchman_mock_count"
