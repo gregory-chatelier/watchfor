@@ -7,7 +7,7 @@ import (
 	"math"
 	"time"
 
-	"github.com/gregory-chatelier/watchman/pkg/watcher"
+	"github.com/gregory-chatelier/watchfor/pkg/watcher"
 )
 
 // Poller manages the polling loop, checking for a pattern from a watcher.

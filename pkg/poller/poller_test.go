@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gregory-chatelier/watchman/pkg/poller"
+	"github.com/gregory-chatelier/watchfor/pkg/poller"
 )
 
 // MockWatcher is a mock implementation of the watcher.Watcher interface for testing.

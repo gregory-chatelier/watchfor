@@ -1,10 +1,10 @@
-# watchman
+# watchfor
 
 A smarter `watch` utility that can trigger actions not just on file change, but on specific content changes.
 
 ## 1. Summary
 
-`watchman` is a command-line utility designed to repeatedly run a command or read a file until specific content is detected -state-based-. It serves as an intelligent and resilient command orchestrator that aims to prevent race conditions in CI/CD pipelines.
+`watchfor` is a command-line utility designed to repeatedly run a command or read a file until specific content is detected -state-based-. It serves as an intelligent and resilient command orchestrator that aims to prevent race conditions in CI/CD pipelines.
 
 It repeatedly polls for a *state* (e.g., a health check returning "healthy", a log file containing "BUILD SUCCESSFUL") and then triggers a subsequent action and allows to handle transient failures and create robust automation.
 
@@ -16,19 +16,19 @@ It features:
 
 ## 2. Core Concepts
 
-`watchman` operates in one of two modes:
+`watchfor` operates in one of two modes:
 
 1.  **Command Mode (`-c` or `--command`):** Executes a shell command at a regular interval and inspects its standard output. This is the primary mode for polling health checks or API endpoints.
 2.  **File Mode (`-f` or `--file`):** Reads the content of a specified file at a regular interval. This is useful for monitoring log files or build artifacts.
 
-In both modes, if the pattern specified by `-p` is found, `watchman` executes a success command. If the pattern is not found after all retries, it executes a failure command.
+In both modes, if the pattern specified by `-p` is found, `watchfor` executes a success command. If the pattern is not found after all retries, it executes a failure command.
 
 ## Usage
 
 The command structure is:
 
 ```bash
-watchman [OPTIONS] -- [SUCCESS_COMMAND]
+watchfor [OPTIONS] -- [SUCCESS_COMMAND]
 ```
 
 ### Options
@@ -47,20 +47,20 @@ watchman [OPTIONS] -- [SUCCESS_COMMAND]
 
 ## Installation
 
-This single command will download and install `watchman` to a sensible default location for your system.
+This single command will download and install `watchfor` to a sensible default location for your system.
 
 **User-level Installation (Recommended for most users):**
-Installs `watchman` to `$HOME/.local/bin` (Linux/macOS) or a user-specific `bin` directory (Windows).
+Installs `watchfor` to `$HOME/.local/bin` (Linux/macOS) or a user-specific `bin` directory (Windows).
 
 ```bash
-curl -sSfL https://raw.githubusercontent.com/gregory-chatelier/watchman/main/install.sh | sh
+curl -sSfL https://raw.githubusercontent.com/gregory-chatelier/watchfor/main/install.sh | sh
 ```
 
 **System-wide Installation (Requires `sudo`):**
-Installs `watchman` to `/usr/local/bin` (Linux/macOS).
+Installs `watchfor` to `/usr/local/bin` (Linux/macOS).
 
 ```bash
-sudo curl -sSfL https://raw.githubusercontent.com/gregory-chatelier/watchman/main/install.sh | sh
+sudo curl -sSfL https://raw.githubusercontent.com/gregory-chatelier/watchfor/main/install.sh | sh
 ```
 
 **Custom Installation Directory:**
@@ -68,7 +68,7 @@ sudo curl -sSfL https://raw.githubusercontent.com/gregory-chatelier/watchman/mai
 You can specify a custom installation directory using the `INSTALL_DIR` environment variable:
 
 ```bash
-curl -sSfL https://raw.githubusercontent.com/gregory-chatelier/watchman/main/install.sh | INSTALL_DIR=$HOME/bin sh
+curl -sSfL https://raw.githubusercontent.com/gregory-chatelier/watchfor/main/install.sh | INSTALL_DIR=$HOME/bin sh
 ```
 
 ## Examples
@@ -78,7 +78,7 @@ curl -sSfL https://raw.githubusercontent.com/gregory-chatelier/watchman/main/ins
 Polls a health endpoint every 5 seconds, with a back-off factor of 2, up to 10 times. If successful, it runs the test suite. If it fails, it sends an alert.
 
 ```bash
-watchman \
+watchfor \
   -c "curl -s https://api.myservice.com/health" \
   -p '"status":"green"' \
   --max-retries 10 \
@@ -93,7 +93,7 @@ watchman \
 Monitors a build log for the success message, timing out after 5 minutes.
 
 ```bash
-watchman \
+watchfor \
   --file "./build.log" \
   --pattern "BUILD SUCCESSFUL" \
   --timeout 5m \
@@ -103,7 +103,7 @@ watchman \
 
 ### 3. Use case : prevent CI/CD Race Conditions
 
-`watchman` is designed to replace time-based waiting loops with resilient, state-based polling.
+`watchfor` is designed to replace time-based waiting loops with resilient, state-based polling.
 
 Before: The common pattern, a shell loop with sleep instructions
 
@@ -134,7 +134,7 @@ script:
 #...
   - echo "Health check: waiting for service to become active..."
   - |
-    watchman \
+    watchfor \
       -c "curl -sf http://$HOST:$PORT/health" \
       -p "200" \
       --max-retries 10 \

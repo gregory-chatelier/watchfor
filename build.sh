@@ -1,12 +1,12 @@
 #!/bin/bash
 
-# This script handles cross-compilation of the watchman tool.
+# This script handles cross-compilation of the watchfor tool.
 
 # Exit immediately if a command exits with a non-zero status.
 set -e
 
 # The name of our application
-APP_NAME="watchman"
+APP_NAME="watchfor"
 
 # The directory to place the compiled binaries in
 DIST_DIR="dist"
@@ -28,7 +28,7 @@ PLATFORMS=(
     "windows/amd64"
 )
 
-echo "Building watchman version $VERSION..."
+echo "Building watchfor version $VERSION..."
 
 for platform in "${PLATFORMS[@]}"; do
     # Split the platform string into OS and architecture

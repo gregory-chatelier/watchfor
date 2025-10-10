@@ -7,13 +7,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gregory-chatelier/watchman/pkg/watcher"
+	"github.com/gregory-chatelier/watchfor/pkg/watcher"
 )
 
 // Helper function to create a temporary file with content
 func createTempFile(t *testing.T, content string) string {
 	t.Helper()
-	tmpfile, err := os.CreateTemp("", "watchman-test-*.log")
+	tmpfile, err := os.CreateTemp("", "watchfor-test-*.log")
 	if err != nil {
 		t.Fatalf("Failed to create temp file: %v", err)
 	}

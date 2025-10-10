@@ -1,4 +1,4 @@
-module github.com/gregory-chatelier/watchman
+module github.com/gregory-chatelier/watchfor
 
 go 1.24.3
 

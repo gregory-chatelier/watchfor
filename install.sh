@@ -1,22 +1,22 @@
 #!/bin/sh
 
-# This script downloads and installs the latest version of the 'watchman' tool.
+# This script downloads and installs the latest version of the 'watchfor' tool.
 #
 # Usage:
-#   curl -sSfL https://raw.githubusercontent.com/gregory-chatelier/watchman/main/install.sh | sh
+#   curl -sSfL https://raw.githubusercontent.com/gregory-chatelier/watchfor/main/install.sh | sh
 #
 # To specify a custom installation directory, set the INSTALL_DIR environment variable
 # for the 'sh' command:
-#   curl -sSfL https://raw.githubusercontent.com/gregory-chatelier/watchman/main/install.sh | INSTALL_DIR=~/my-bin sh
+#   curl -sSfL https://raw.githubusercontent.com/gregory-chatelier/watchfor/main/install.sh | INSTALL_DIR=~/my-bin sh
 
 set -e
 
 # --- Configuration ---
 # The GitHub repository to fetch the tool from.
-REPO="gregory-chatelier/watchman"
+REPO="gregory-chatelier/watchfor"
 
 # The name of the binary.
-APP_NAME="watchman"
+APP_NAME="watchfor"
 
 # --- Helper Functions ---
 
@@ -163,7 +163,7 @@ if [ "$INSTALL_DIR" = "/usr/local/bin" ] && [ "$(id -u)" -ne 0 ]; then
     echo "Attempting to install to a system directory ($INSTALL_DIR). Re-executing with sudo..."
     # Re-execute the current script with sudo
     # This handles the `curl | sh` case where sudo only applies to curl
-    exec sudo sh -c "$(cat "$0" 2>/dev/null || curl -sSfL https://raw.githubusercontent.com/gregory-chatelier/watchman/main/install.sh)" "$@"
+    exec sudo sh -c "$(cat "$0" 2>/dev/null || curl -sSfL https://raw.githubusercontent.com/gregory-chatelier/watchfor/main/install.sh)" "$@"
 fi
 
 # Get the latest version

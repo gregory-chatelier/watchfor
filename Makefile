@@ -1,4 +1,4 @@
-# Makefile for the watchman project
+# Makefile for the watchfor project
 
 # Go parameters
 GOCMD=go
@@ -11,7 +11,7 @@ GOVET=$(GOCMD) vet
 GOLANGCILINT=golangci-lint
 
 # Binary name
-BINARY_NAME=watchman
+BINARY_NAME=watchfor
 
 .PHONY: all test build clean fmt vet lint
 

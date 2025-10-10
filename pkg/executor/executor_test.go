@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/gregory-chatelier/watchman/pkg/executor"
+	"github.com/gregory-chatelier/watchfor/pkg/executor"
 )
 
 // TestExecute_Success tests running a simple, successful command.

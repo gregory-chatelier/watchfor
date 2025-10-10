@@ -3,7 +3,7 @@
 # This script simulates a flaky health check endpoint.                                                                                                                                                    
 # It fails twice and succeeds on the third call.                                                                                                                                                          
                                                                                                                                                                                                           
-MOCK_FILE="/tmp/watchman_mock_count"                                                                                                                                                                      
+MOCK_FILE="/tmp/watchfor_mock_count"                                                                                                                                                                      
                                                                                                                                                                                                           
 # Initialize count if it doesn't exist                                                                                                                                                                    
 if [ ! -f "$MOCK_FILE" ]; then                                                                                                                                                                            

@@ -9,9 +9,9 @@ import (
 
 	"github.com/spf13/pflag"
 
-	"github.com/gregory-chatelier/watchman/pkg/executor"
-	"github.com/gregory-chatelier/watchman/pkg/poller"
-	"github.com/gregory-chatelier/watchman/pkg/watcher"
+	"github.com/gregory-chatelier/watchfor/pkg/executor"
+	"github.com/gregory-chatelier/watchfor/pkg/poller"
+	"github.com/gregory-chatelier/watchfor/pkg/watcher"
 )
 
 var (
@@ -35,16 +35,16 @@ var (
 func init() {
 	pflag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: %s [OPTIONS] -- [SUCCESS_COMMAND]\n\n", os.Args[0])
-		fmt.Fprintln(os.Stderr, "Watchman is a resilient command orchestrator that polls a command or file until a pattern is found.")
+		fmt.Fprintln(os.Stderr, "Watchfor is a resilient command orchestrator that polls a command or file until a pattern is found.")
 		fmt.Fprintln(os.Stderr, "It is designed to replace brittle 'sleep' calls in CI/CD and scripting.\n")
 		fmt.Fprintln(os.Stderr, "Options:")
 		pflag.PrintDefaults()
 		fmt.Fprintln(os.Stderr, "\nExamples:")
 		fmt.Fprintln(os.Stderr, "  # Wait for a health check to return 'healthy' with exponential backoff")
-		fmt.Fprintln(os.Stderr, "  watchman -c 'curl -s https://api/health' -p 'status: healthy' --backoff 2 -- ./run_tests.sh")
+		fmt.Fprintln(os.Stderr, "  watchfor -c 'curl -s https://api/health' -p 'status: healthy' --backoff 2 -- ./run_tests.sh")
 		fmt.Fprintln(os.Stderr, "")
 		fmt.Fprintln(os.Stderr, "  # Wait for a log file to contain 'BUILD SUCCESSFUL' for up to 5 minutes")
-		fmt.Fprintln(os.Stderr, "  watchman -f build.log -p 'BUILD SUCCESSFUL' --timeout 5m -- ./deploy.sh")
+		fmt.Fprintln(os.Stderr, "  watchfor -f build.log -p 'BUILD SUCCESSFUL' --timeout 5m -- ./deploy.sh")
 	}
 }
 
