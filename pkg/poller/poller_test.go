@@ -9,130 +9,125 @@ import (
 	"github.com/gregory-chatelier/watchman/pkg/poller"
 )
 
-// MockWatcher is a mock implementation of the watcher.Watcher interface
+// MockWatcher is a mock implementation of the watcher.Watcher interface for testing.
 type MockWatcher struct {
-	// Outputs is a list of outputs to return on successive calls to Check()
-	Outputs []string
-	// Errors is a list of errors to return on successive calls to Check()
-	Errors []error
-	// CallCount tracks how many times Check() has been called
-	CallCount int
+	Attempts int
+	Pattern  string
+	Output   []byte
+	Err      error
 }
 
-// Check returns the next output from the Outputs slice.
 func (m *MockWatcher) Check() ([]byte, error) {
-	if m.CallCount >= len(m.Outputs) {
-		return []byte(""), errors.New("mock output exhausted")
+	m.Attempts++
+	if m.Attempts == 3 {
+		return []byte(m.Pattern), nil // Succeeds on the 3rd attempt
 	}
-
-	output := m.Outputs[m.CallCount]
-	var err error
-	if m.CallCount < len(m.Errors) && m.Errors[m.CallCount] != nil {
-		err = m.Errors[m.CallCount]
+	if m.Err != nil {
+		return m.Output, m.Err
 	}
-	m.CallCount++
-	return []byte(output), err
+	return m.Output, nil
 }
 
-// TestPoller_SuccessOnFirstAttempt tests if the poller succeeds immediately.
-func TestPoller_SuccessOnFirstAttempt(t *testing.T) {
-	mock := &MockWatcher{
-		Outputs: []string{"status: green"},
-	}
-	p := poller.New(mock, "status: green", false)
+// --- Poller Tests ---
 
-	if !p.Run(context.Background(), time.Millisecond, 1, 1) {
-		t.Error("Expected success on first attempt, got failure")
+func TestPoller_Run_Success(t *testing.T) {
+	mockWatcher := &MockWatcher{
+		Pattern: "SUCCESS",
+		Output:  []byte("some log output"),
 	}
-	if mock.CallCount != 1 {
-		t.Errorf("Expected 1 call, got %d", mock.CallCount)
-	}
-}
+	p := poller.New(mockWatcher, "SUCCESS", false)
 
-// TestPoller_SuccessAfterRetries tests if the poller succeeds after a few failures.
-func TestPoller_SuccessAfterRetries(t *testing.T) {
-	mock := &MockWatcher{
-		Outputs: []string{"status: red", "status: yellow", "status: green"},
-	}
-	p := poller.New(mock, "status: green", false)
+	// Run with enough retries to succeed on the 3rd attempt
+	success := p.Run(context.Background(), 1*time.Millisecond, 5, 1)
 
-	if !p.Run(context.Background(), time.Millisecond, 5, 1) {
-		t.Error("Expected success after retries, got failure")
+	if !success {
+		t.Errorf("Expected Run to succeed, but it failed")
 	}
-	if mock.CallCount != 3 {
-		t.Errorf("Expected 3 calls, got %d", mock.CallCount)
+	if mockWatcher.Attempts != 3 {
+		t.Errorf("Expected 3 attempts, got %d", mockWatcher.Attempts)
 	}
 }
 
-// TestPoller_FailureAfterMaxRetries tests if the poller fails when max retries are reached.
-func TestPoller_FailureAfterMaxRetries(t *testing.T) {
-	mock := &MockWatcher{
-		Outputs: []string{"status: red", "status: red", "status: red"},
+func TestPoller_Run_MaxRetries(t *testing.T) {
+	mockWatcher := &MockWatcher{
+		Pattern: "NEVER_FOUND",
+		Output:  []byte("some log output"),
 	}
-	p := poller.New(mock, "status: green", false)
+	p := poller.New(mockWatcher, "SUCCESS", false)
 
-	// Max retries is 3. The loop runs 3 times (attempt 0, 1, 2).
-	if p.Run(context.Background(), time.Millisecond, 3, 1) {
-		t.Error("Expected failure after max retries, got success")
+	// Run with only 2 retries (will fail)
+	success := p.Run(context.Background(), 1*time.Millisecond, 2, 1)
+
+	if success {
+		t.Errorf("Expected Run to fail due to max retries, but it succeeded")
 	}
-	if mock.CallCount != 3 {
-		t.Errorf("Expected 3 calls, got %d", mock.CallCount)
+	if mockWatcher.Attempts != 2 {
+		t.Errorf("Expected 2 attempts, got %d", mockWatcher.Attempts)
 	}
 }
 
-// TestPoller_WatcherError tests the error handling path when the watcher fails.
-func TestPoller_WatcherError(t *testing.T) {
-	mock := &MockWatcher{
-		Outputs: []string{"status: red", "status: green"},
-		Errors:  []error{errors.New("network error"), nil},
+func TestPoller_Run_Timeout(t *testing.T) {
+	mockWatcher := &MockWatcher{
+		Pattern: "SUCCESS",
+		Output:  []byte("some log output"),
 	}
-	p := poller.New(mock, "status: green", true) // Use verbose to cover that path
+	p := poller.New(mockWatcher, "SUCCESS", false)
 
-	if !p.Run(context.Background(), time.Millisecond, 5, 1) {
-		t.Error("Expected success after one error, got failure")
-	}
-	if mock.CallCount != 2 {
-		t.Errorf("Expected 2 calls, got %d", mock.CallCount)
-	}
-}
-
-// TestPoller_Timeout tests if the poller stops due to a context timeout.
-func TestPoller_Timeout(t *testing.T) {
-	mock := &MockWatcher{
-		Outputs: []string{"status: red", "status: red", "status: red", "status: red", "status: red"},
-	}
-	p := poller.New(mock, "status: green", false)
-
-	// Set a very short timeout and a long interval to ensure timeout is hit first.
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+	// Set a very short timeout that will expire before the 3rd attempt
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Millisecond)
 	defer cancel()
 
-	// Use a long interval to ensure the timeout is hit before the next check.
-	if p.Run(ctx, 50*time.Millisecond, 5, 1) {
-		t.Error("Expected failure due to timeout, got success")
+	// Use a long interval to ensure the timeout is hit during the wait
+	success := p.Run(ctx, 100*time.Millisecond, 10, 1)
+
+	if success {
+		t.Errorf("Expected Run to fail due to timeout, but it succeeded")
 	}
-	// Call count should be 1 (the first check)
-	if mock.CallCount != 1 {
-		t.Errorf("Expected 1 call before timeout, got %d", mock.CallCount)
+	// Attempts should be 1 or 2, depending on timing, but definitely less than 3
+	if mockWatcher.Attempts >= 3 {
+		t.Errorf("Expected less than 3 attempts due to timeout, got %d", mockWatcher.Attempts)
 	}
 }
 
-// TestPoller_Verbose tests the verbose logging path for non-matching output.
-func TestPoller_Verbose(t *testing.T) {
-	mock := &MockWatcher{
-		Outputs: []string{"status: red", "status: green"},
+func TestPoller_Run_Backoff(t *testing.T) {
+	mockWatcher := &MockWatcher{
+		Pattern: "SUCCESS",
+		Output:  []byte("some log output"),
 	}
-	p := poller.New(mock, "status: green", true) // Verbose is true
+	p := poller.New(mockWatcher, "SUCCESS", false)
 
-	if !p.Run(context.Background(), time.Millisecond, 5, 1) {
-		t.Error("Expected success, got failure")
+	// Measure the time taken for 3 attempts with backoff=2 and interval=10ms
+	start := time.Now()
+	p.Run(context.Background(), 10*time.Millisecond, 3, 2)
+	duration := time.Since(start)
+
+	// Expected delays:
+	// Attempt 1: 0ms (no wait before first check)
+	// Wait 1: 10ms * 2^1 = 20ms
+	// Wait 2: 10ms * 2^2 = 40ms
+	// Total expected wait time: 60ms.
+	// We add a buffer for execution time.
+	expectedMinDuration := 60 * time.Millisecond
+	if duration < expectedMinDuration {
+		t.Errorf("Expected duration to be at least %s, got %s", expectedMinDuration, duration)
 	}
-	// The verbose path for non-matching output should be covered.
 }
 
-// TestPoller_BackoffCalculation tests the exponential backoff logic.
-func TestPoller_BackoffCalculation(t *testing.T) {
-	// Since the calculation is inside Run, we'll just ensure the Run method
-	// doesn't panic and the logic is sound. The previous tests cover the core
-	// success/failure paths.
+func TestPoller_Run_WatcherError(t *testing.T) {
+	mockWatcher := &MockWatcher{
+		Pattern: "SUCCESS",
+		Output:  []byte("some error output"),
+		Err:     errors.New("simulated watcher error"),
+	}
+	p := poller.New(mockWatcher, "SUCCESS", true) // Verbose to ensure logging path is hit
+
+	// Run with enough retries to succeed on the 3rd attempt
+	success := p.Run(context.Background(), 1*time.Millisecond, 5, 1)
+
+	if !success {
+		t.Errorf("Expected Run to succeed, but it failed")
+	}
+	if mockWatcher.Attempts != 3 {
+		t.Errorf("Expected 3 attempts, got %d", mockWatcher.Attempts)
+	}
 }

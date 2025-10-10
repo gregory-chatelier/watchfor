@@ -34,15 +34,21 @@ func (p *Poller) Run(ctx context.Context, interval time.Duration, maxRetries int
 		if err != nil {
 			if p.verbose {
 				fmt.Printf("Attempt %d: Error checking watcher: %v\n", attempt+1, err)
+				// Print the output even on error, as the pattern might be in the combined output
+				if len(output) > 0 {
+					fmt.Printf("Attempt %d: Output:\n%s\n", attempt+1, string(output))
+				}
 			}
-		} else {
-			if p.verbose {
-				fmt.Printf("Attempt %d: Checking output...\n", attempt+1)
+		} else if p.verbose {
+			fmt.Printf("Attempt %d: Command successful. Checking output...\n", attempt+1)
+			if len(output) > 0 {
+				fmt.Printf("Attempt %d: Output:\n%s\n", attempt+1, string(output))
 			}
-			if bytes.Contains(output, p.pattern) {
-				fmt.Println("Pattern found!")
-				return true // Success
-			}
+		}
+
+		if bytes.Contains(output, p.pattern) {
+			fmt.Println("Pattern found!")
+			return true // Success
 		}
 
 		// Check if we should stop.

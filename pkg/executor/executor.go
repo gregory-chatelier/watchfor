@@ -17,8 +17,8 @@ func Execute(command string) error {
 
 	var cmd *exec.Cmd
 	if runtime.GOOS == "windows" {
-		// Use cmd /C on Windows
-		cmd = exec.Command("cmd", "/C", command)
+		// Use powershell -Command on Windows
+		cmd = exec.Command("powershell", "-Command", command)
 	} else {
 		// Use sh -c on Unix-like systems
 		cmd = exec.Command("sh", "-c", command)

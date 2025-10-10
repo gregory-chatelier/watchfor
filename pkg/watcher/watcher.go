@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"runtime"
 )
 
 // Watcher defines the interface for checking a source for a pattern.
@@ -27,25 +28,25 @@ func NewCommandWatcher(cmd string) *CommandWatcher {
 
 // Check executes the command and returns its standard output.
 func (cw *CommandWatcher) Check() ([]byte, error) {
-	// Execute the command using a shell interpreter (sh -c) to handle shell scripts,
-	// pipes, and complex commands correctly.
-	cmd := exec.Command("sh", "-c", cw.command)
+	var cmd *exec.Cmd
+	var shell, flag string
 
-	// cmd.Output() returns the combined stdout and stderr if the command exits with a non-zero status.
-	// We only care about stdout for pattern matching.
-	// However, for simplicity and to capture all output for pattern matching, we use cmd.Output().
-	// If the command fails (non-zero exit code), cmd.Output() returns an error, but the output is still available in the error.
-	// We will return the output and ignore the error for now, as the pattern check is the primary concern.
-	// A better approach is to use cmd.CombinedOutput() or handle the error to extract the output.
-	
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		// If the command fails (non-zero exit code), we still return the output
-		// so the pattern can be checked against the error message/output.
-		return output, nil
+	if runtime.GOOS == "windows" {
+		shell = "powershell"
+		flag = "-Command"
+	} else {
+		shell = "sh"
+		flag = "-c"
 	}
 
-	return output, nil
+	cmd = exec.Command(shell, flag, cw.command)
+
+	// Use CombinedOutput to capture both stdout and stderr for pattern matching
+	output, err := cmd.CombinedOutput()
+
+	// Return the output and the error (if any).
+	// The poller will decide whether to treat a non-zero exit code as a failure.
+	return output, err
 }
 
 // --- File Watcher ---
@@ -114,7 +115,9 @@ func (fw *FileWatcher) Check() ([]byte, error) {
 // Close closes the file handle.
 func (fw *FileWatcher) Close() error {
 	if fw.file != nil {
-		return fw.file.Close()
+		err := fw.file.Close()
+		fw.file = nil // Prevent double close
+		return err
 	}
 	return nil
 }
