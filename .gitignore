@@ -37,3 +37,5 @@ var/
 
 WATCHMAN_DESIGN.md
 watchman.exe
+
+dist/
