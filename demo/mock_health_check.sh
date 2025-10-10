@@ -1,0 +1,25 @@
+#!/bin/bash                                                                                                                                                                                               
+                                                                                                                                                                                                          
+# This script simulates a flaky health check endpoint.                                                                                                                                                    
+# It fails twice and succeeds on the third call.                                                                                                                                                          
+                                                                                                                                                                                                          
+MOCK_FILE="/tmp/watchman_mock_count"                                                                                                                                                                      
+                                                                                                                                                                                                          
+# Initialize count if it doesn't exist                                                                                                                                                                    
+if [ ! -f "$MOCK_FILE" ]; then                                                                                                                                                                            
+    echo 0 > "$MOCK_FILE"                                                                                                                                                                                 
+fi                                                                                                                                                                                                        
+                                                                                                                                                                                                          
+COUNT=$(cat "$MOCK_FILE")                                                                                                                                                                                 
+COUNT=$((COUNT + 1))                                                                                                                                                                                      
+echo $COUNT > "$MOCK_FILE"                                                                                                                                                                                
+                                                                                                                                                                                                          
+if [ "$COUNT" -le 2 ]; then                                                                                                                                                                               
+    printf "status: red (Attempt %d)" "$COUNT"                                                                                                                                                            
+    exit 1                                                                                                                                                                                                
+else                                                                                                                                                                                                      
+    printf "status: green (Attempt %d)" "$COUNT"                                                                                                                                                          
+    # Clean up the mock file after success                                                                                                                                                                
+    rm -f "$MOCK_FILE"                                                                                                                                                                                    
+    exit 0                                                                                                                                                                                                
+fi  

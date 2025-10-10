@@ -55,6 +55,13 @@ func (p *Poller) Run(ctx context.Context, interval time.Duration, maxRetries int
 
 		// Calculate next delay
 		delay := float64(interval) * math.Pow(backoff, float64(attempt))
+
+		// Cap the delay to prevent overflow and excessive waiting (e.g., 1 hour max)
+		maxDelay := float64(time.Hour)
+		if delay > maxDelay {
+			delay = maxDelay
+		}
+
 		nextInterval := time.Duration(delay)
 
 		if p.verbose {

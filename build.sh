@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# This script handles cross-compilation of the focus tool.
+# This script handles cross-compilation of the watchman tool.
 
 # Exit immediately if a command exits with a non-zero status.
 set -e
@@ -28,7 +28,7 @@ PLATFORMS=(
     "windows/amd64"
 )
 
-echo "Building focus version $VERSION..."
+echo "Building watchman version $VERSION..."
 
 for platform in "${PLATFORMS[@]}"; do
     # Split the platform string into OS and architecture

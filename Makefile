@@ -1,4 +1,4 @@
-# Makefile for the focus project
+# Makefile for the watchman project
 
 # Go parameters
 GOCMD=go

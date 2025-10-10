@@ -3,11 +3,11 @@
 # This script downloads and installs the latest version of the 'watchman' tool.
 #
 # Usage:
-#   curl -sSfL https://raw.githubusercontent.com/gregory-chatelier/focus/main/install.sh | sh
+#   curl -sSfL https://raw.githubusercontent.com/gregory-chatelier/watchman/main/install.sh | sh
 #
 # To specify a custom installation directory, set the INSTALL_DIR environment variable
 # for the 'sh' command:
-#   curl -sSfL https://raw.githubusercontent.com/gregory-chatelier/focus/main/install.sh | INSTALL_DIR=~/my-bin sh
+#   curl -sSfL https://raw.githubusercontent.com/gregory-chatelier/watchman/main/install.sh | INSTALL_DIR=~/my-bin sh
 
 set -e
 
