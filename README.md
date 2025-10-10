@@ -1,12 +1,27 @@
 # watchman
 
-**watchman** is a resilient command orchestrator written in Go. It is designed to replace brittle `sleep` calls in CI/CD pipelines and scripts by waiting for a specific *state* (a pattern in a command's output or a file's content) before proceeding.
+A smarter `watch` utility that can trigger actions not just on file change, but on specific content changes.
+
+## 1. Summary
+
+`watchman` is a command-line utility designed to repeatedly run a command or read a file until specific content is detected -state-based-. It serves as an intelligent and resilient command orchestrator that aims to prevent race conditions in CI/CD pipelines.
+
+It repeatedly polls for a *state* (e.g., a health check returning "healthy", a log file containing "BUILD SUCCESSFUL") and then triggers a subsequent action and allows to handle transient failures and create robust automation.
 
 It features:
 *   **Command Polling:** Repeatedly runs a command (e.g., a health check) and inspects its output.
 *   **File Watching:** Efficiently monitors a file (like a log) for new content, similar to `tail -f`.
 *   **Resilience:** Built-in support for maximum retries, exponential backoff, and a global timeout.
 *   **Graceful Failure:** Executes a fallback command (`--on-fail`) if the condition is never met.
+
+## 2. Core Concepts
+
+`watchman` operates in one of two modes:
+
+1.  **Command Mode (`-c` or `--command`):** Executes a shell command at a regular interval and inspects its standard output. This is the primary mode for polling health checks or API endpoints.
+2.  **File Mode (`-f` or `--file`):** Reads the content of a specified file at a regular interval. This is useful for monitoring log files or build artifacts.
+
+In both modes, if the pattern specified by `-p` is found, `watchman` executes a success command. If the pattern is not found after all retries, it executes a failure command.
 
 ## Installation
 
@@ -38,11 +53,37 @@ watchman [OPTIONS] -- [SUCCESS_COMMAND]
 | `--on-fail` | Command to execute if the pattern is not found after all attempts or on timeout. | |
 | `-v`, `--verbose` | Enable verbose logging. | `false` |
 
+## Installation
+
+This single command will download and install `watchman` to a sensible default location for your system.
+
+**User-level Installation (Recommended for most users):**
+Installs `watchman` to `$HOME/.local/bin` (Linux/macOS) or a user-specific `bin` directory (Windows).
+
+```bash
+curl -sSfL https://raw.githubusercontent.com/gregory-chatelier/watchman/main/install.sh | sh
+```
+
+**System-wide Installation (Requires `sudo`):**
+Installs `watchman` to `/usr/local/bin` (Linux/macOS).
+
+```bash
+sudo curl -sSfL https://raw.githubusercontent.com/gregory-chatelier/watchman/main/install.sh | sh
+```
+
+**Custom Installation Directory:**
+
+You can specify a custom installation directory using the `INSTALL_DIR` environment variable:
+
+```bash
+curl -sSfL https://raw.githubusercontent.com/gregory-chatelier/watchman/main/install.sh | INSTALL_DIR=$HOME/bin sh
+```
+
 ## Examples
 
 ### 1. Wait for a Service Health Check
 
-Polls a health endpoint every 5 seconds, with a backoff factor of 2, up to 10 times. If successful, it runs the test suite. If it fails, it sends an alert.
+Polls a health endpoint every 5 seconds, with a back-off factor of 2, up to 10 times. If successful, it runs the test suite. If it fails, it sends an alert.
 
 ```bash
 watchman \
@@ -51,7 +92,7 @@ watchman \
   --max-retries 10 \
   --interval 5s \
   --backoff 2 \
-  --on-fail "echo 'Service never became healthy' | mail -s 'Deploy failed' ops@company.com" \
+  --on-fail "echo 'Service never became healthy' | mail -s 'Deploy failed' ops@company.com; exit 1" \
   -- ./run_tests.sh
 ```
 
@@ -64,6 +105,53 @@ watchman \
   --file "./build.log" \
   --pattern "BUILD SUCCESSFUL" \
   --timeout 5m \
-  --on-fail "echo 'Build failed or timed out'" \
+  --on-fail "echo 'Build failed or timed out'; exit 1" \
   -- ./deploy.sh
 ```
+
+### 3. Use case : prevent CI/CD Race Conditions
+
+`watchman` is designed to replace time-based waiting loops with resilient, state-based polling.
+
+Before: The common pattern, a shell loop with sleep instructions
+
+```bash
+script:
+#...
+  - echo "Health check..."
+  - |
+    for i in $(seq 1 10); do
+      if curl -f http://$HOST:$PORT/health; then
+        echo "Service is active!"
+        break
+      else
+        echo "Attempt $i/10: Service not yet active. Waiting 5 seconds..."
+        sleep 5
+      fi
+    done
+    if ! curl -f http://$HOST:$PORT/health; then
+      echo "Health check failed after multiple attempts."
+      exit 1
+    fi
+```
+
+After: One single declarative and resilient command
+
+```bash
+script:
+#...
+  - echo "Health check: waiting for service to become active..."
+  - |
+    watchman \
+      -c "curl -sf http://$HOST:$PORT/health" \
+      -p "200" \
+      --max-retries 10 \
+      --interval 5s \
+      --on-fail "echo '❌ Health check failed after multiple attempts.'; \
+                 exit 1" \
+      -- echo "✅ Service is active!"
+```
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
