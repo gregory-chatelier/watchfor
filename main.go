@@ -28,6 +28,7 @@ var (
 	interval    = pflag.Duration("interval", 1*time.Second, "The initial interval between polling attempts (e.g., `5s`, `1m`).")
 	maxRetries  = pflag.Int("max-retries", 10, "The maximum number of polling attempts before giving up. `0` means retry forever.")
 	backoff     = pflag.Float64("backoff", 1, "The exponential backoff factor. A factor of `1` disables exponential backoff.")
+	jitter      = pflag.Float64("jitter", 0, "The jitter factor to apply to the backoff delay (0 to 1). `0` disables jitter.")
 	timeout     = pflag.Duration("timeout", 0, "Overall max wait time. Overrides --max-retries. `0` means no timeout.")
 	failCommand = pflag.String("on-fail", "", "The command to execute if the pattern is not found.")
 
@@ -84,6 +85,10 @@ func main() {
 		fmt.Fprintln(os.Stderr, "Error: --backoff must be >= 1.")
 		os.Exit(1)
 	}
+	if *jitter < 0 || *jitter > 1 {
+		fmt.Fprintln(os.Stderr, "Error: --jitter must be between 0 and 1.")
+		os.Exit(1)
+	}
 
 	// The command to execute on success is all args after '--'
 	successCommandArgs := pflag.Args()
@@ -116,7 +121,7 @@ func main() {
 	}
 	defer cancel()
 
-	success := poller.Run(ctx, *interval, *maxRetries, *backoff)
+	success := poller.Run(ctx, *interval, *maxRetries, *backoff, *jitter)
 
 	if success {
 		fmt.Println("\n✅ Success: Executing success command.")

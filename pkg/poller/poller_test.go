@@ -48,7 +48,7 @@ func TestPoller_Run_MatchingLogic(t *testing.T) {
 			mockWatcher := &MockWatcher{Output: []byte(tc.output)}
 			p := poller.New(mockWatcher, tc.pattern, false, tc.regex, tc.ignoreCase)
 
-			success := p.Run(context.Background(), 1*time.Millisecond, 1, 1)
+			success := p.Run(context.Background(), 1*time.Millisecond, 1, 1, 0)
 
 			if success != tc.expected {
 				t.Errorf("Expected success=%v, but got %v", tc.expected, success)
@@ -70,7 +70,7 @@ func TestPoller_Run_Success(t *testing.T) {
 	}()
 
 	// Run with enough retries to succeed on the 3rd attempt
-	success := p.Run(context.Background(), 1*time.Millisecond, 5, 1)
+	success := p.Run(context.Background(), 1*time.Millisecond, 5, 1, 0)
 
 	if !success {
 		t.Errorf("Expected Run to succeed, but it failed")
@@ -84,7 +84,7 @@ func TestPoller_Run_MaxRetries(t *testing.T) {
 	p := poller.New(mockWatcher, "SUCCESS", false, false, false)
 
 	// Run with only 2 retries (will fail)
-	success := p.Run(context.Background(), 1*time.Millisecond, 2, 1)
+	success := p.Run(context.Background(), 1*time.Millisecond, 2, 1, 0)
 
 	if success {
 		t.Errorf("Expected Run to fail due to max retries, but it succeeded")
@@ -105,7 +105,7 @@ func TestPoller_Run_Timeout(t *testing.T) {
 	defer cancel()
 
 	// Use a long interval to ensure the timeout is hit during the wait
-	success := p.Run(ctx, 100*time.Millisecond, 10, 1)
+	success := p.Run(ctx, 100*time.Millisecond, 10, 1, 0)
 
 	if success {
 		t.Errorf("Expected Run to fail due to timeout, but it succeeded")
@@ -118,10 +118,57 @@ func TestPoller_Run_WatcherError(t *testing.T) {
 	}
 	p := poller.New(mockWatcher, "SUCCESS", true, false, false) // Verbose to ensure logging path is hit
 
-	success := p.Run(context.Background(), 1*time.Millisecond, 2, 1)
+	success := p.Run(context.Background(), 1*time.Millisecond, 2, 1, 0)
 
 	if success {
 		t.Errorf("Expected Run to fail due to watcher error, but it succeeded")
+	}
+}
+
+func TestPoller_Run_Backoff(t *testing.T) {
+	mockWatcher := &MockWatcher{
+		Output: []byte("some log output"),
+	}
+	p := poller.New(mockWatcher, "SUCCESS", false, false, false)
+
+	// Measure the time taken for 3 attempts with backoff=2 and interval=10ms
+	start := time.Now()
+	p.Run(context.Background(), 10*time.Millisecond, 3, 2, 0)
+	duration := time.Since(start)
+
+	// Expected delays:
+	// Attempt 1: 0ms (no wait before first check)
+	// Wait 1: 10ms * 2^1 = 20ms
+	// Wait 2: 10ms * 2^2 = 40ms
+	// Total expected wait time: 60ms.
+	// We add a buffer for execution time.
+	expectedMinDuration := 60 * time.Millisecond
+	if duration < expectedMinDuration {
+		t.Errorf("Expected duration to be at least %s, got %s", expectedMinDuration, duration)
+	}
+}
+
+func TestPoller_Run_Jitter(t *testing.T) {
+	mockWatcher := &MockWatcher{
+		Output: []byte("some log output"),
+	}
+	p := poller.New(mockWatcher, "SUCCESS", false, false, false)
+
+	// Measure the time taken for 3 attempts with backoff=2, interval=10ms, and jitter=0.5
+	start := time.Now()
+	p.Run(context.Background(), 10*time.Millisecond, 3, 2, 0.5)
+	duration := time.Since(start)
+
+	// Expected delays:
+	// Attempt 1: 0ms
+	// Wait 1: 20ms + jitter (0 to 10ms)
+	// Wait 2: 40ms + jitter (0 to 20ms)
+	// Total expected wait time: 60ms + jitter (0 to 30ms)
+	expectedMinDuration := 60 * time.Millisecond
+	expectedMaxDuration := 90 * time.Millisecond
+
+	if duration < expectedMinDuration || duration > expectedMaxDuration {
+		t.Errorf("Expected duration to be between %s and %s, got %s", expectedMinDuration, expectedMaxDuration, duration)
 	}
 }
 

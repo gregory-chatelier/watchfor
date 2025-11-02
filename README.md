@@ -43,6 +43,7 @@ watchfor [OPTIONS] -- [SUCCESS_COMMAND]
 | `--interval` | The initial interval between polling attempts (e.g., `5s`, `1m`). | `1s` |
 | `--max-retries` | Maximum polling attempts before giving up. `0` means retry forever. | `10` |
 | `--backoff` | Exponential backoff factor (delay is multiplied by this factor each retry). A factor of `1` disables exponential backoff. | `1` |
+| `--jitter` | The jitter factor to apply to the backoff delay (0 to 1). `0` disables jitter. | `0` |
 | `--timeout` | Overall max wait time (e.g., `5m`). Overrides `--max-retries`. | `0` (no timeout) |
 | `--on-fail` | Command to execute if the pattern is not found after all attempts or on timeout. | |
 | `-v`, `--verbose` | Enable verbose logging. | `false` |

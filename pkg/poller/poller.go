@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"math/rand"
 	"regexp"
 	"time"
 
@@ -32,7 +33,7 @@ func New(w watcher.Watcher, pattern string, verbose bool, regex bool, ignoreCase
 }
 
 // Run starts the polling loop and returns true if the pattern is found.
-func (p *Poller) Run(ctx context.Context, interval time.Duration, maxRetries int, backoff float64) bool {
+func (p *Poller) Run(ctx context.Context, interval time.Duration, maxRetries int, backoff float64, jitter float64) bool {
 	attempt := 0
 	for {
 		output, err := p.w.Check()
@@ -72,6 +73,12 @@ func (p *Poller) Run(ctx context.Context, interval time.Duration, maxRetries int
 
 		// Calculate next delay
 		delay := float64(interval) * math.Pow(backoff, float64(attempt))
+
+		// Add jitter
+		if jitter > 0 {
+			jitterAmount := delay * jitter
+			delay += rand.Float64() * jitterAmount
+		}
 
 		// Cap the delay to prevent overflow and excessive waiting (e.g., 1 hour max)
 		maxDelay := float64(time.Hour)
