@@ -21,6 +21,8 @@ var (
 	command = pflag.StringP("command", "c", "", "The command to execute and inspect.")
 	file    = pflag.StringP("file", "f", "", "The path to the file to read and inspect.")
 	pattern = pflag.StringP("pattern", "p", "", "The exact string to search for in the output or file content.")
+	regex = pflag.Bool("regex", false, "Enable regex matching for the pattern.")
+	ignoreCase = pflag.Bool("ignore-case", false, "Enable case-insensitive matching for the pattern.")
 
 	// Retry Options
 	interval    = pflag.Duration("interval", 1*time.Second, "The initial interval between polling attempts (e.g., `5s`, `1m`).")
@@ -39,8 +41,8 @@ func init() {
 	pflag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: %s [OPTIONS] -- [SUCCESS_COMMAND]\n\n", os.Args[0])
 		fmt.Fprintln(os.Stderr, "Watchfor is a resilient command orchestrator that polls a command or file until a pattern is found.")
-		fmt.Fprintln(os.Stderr, "It is designed to replace brittle 'sleep' calls in CI/CD and scripting.\n")
-		fmt.Fprintln(os.Stderr, "Version: " + version + "\n")
+		fmt.Fprintln(os.Stderr, "It is designed to replace brittle 'sleep' calls in CI/CD and scripting.")
+		fmt.Fprintln(os.Stderr, "Version: " + version)
 		fmt.Fprintln(os.Stderr, "Options:")
 		pflag.PrintDefaults()
 		fmt.Fprintln(os.Stderr, "\nExamples:")
@@ -105,7 +107,7 @@ func main() {
 	}
 
 	// --- Run the Poller ---
-	poller := poller.New(w, *pattern, *verbose)
+	poller := poller.New(w, *pattern, *verbose, *regex, *ignoreCase)
 
 	// Create a context for the timeout
 	ctx, cancel := context.WithCancel(context.Background())

@@ -38,12 +38,19 @@ watchfor [OPTIONS] -- [SUCCESS_COMMAND]
 | `-c`, `--command` | The command to execute and inspect. | |
 | `-f`, `--file` | The path to the file to read and inspect. | |
 | `-p`, `--pattern` | The exact string to search for in the output or file content. **Required.** | |
+| `--regex` | Enable regex matching for the pattern. | `false` |
+| `--ignore-case` | Enable case-insensitive matching for the pattern. | `false` |
 | `--interval` | The initial interval between polling attempts (e.g., `5s`, `1m`). | `1s` |
 | `--max-retries` | Maximum polling attempts before giving up. `0` means retry forever. | `10` |
 | `--backoff` | Exponential backoff factor (delay is multiplied by this factor each retry). A factor of `1` disables exponential backoff. | `1` |
 | `--timeout` | Overall max wait time (e.g., `5m`). Overrides `--max-retries`. | `0` (no timeout) |
 | `--on-fail` | Command to execute if the pattern is not found after all attempts or on timeout. | |
 | `-v`, `--verbose` | Enable verbose logging. | `false` |
+
+### Pattern Matching Details
+
+When using the `--regex` flag, `watchfor` utilizes Go's standard regular expression syntax. You can find detailed documentation on the supported regex syntax [here](https://pkg.go.dev/regexp).
+
 
 ## Installation
 
@@ -142,6 +149,35 @@ script:
       --on-fail "echo '❌ Health check failed after multiple attempts.'; \
                  exit 1" \
       -- echo "✅ Service is active!"
+```
+
+### 4. Wait for a Kubernetes Pod to be Ready (Regex and Case-Insensitive)
+
+Polls `kubectl get pod <pod-name> -o jsonpath='{.status.containerStatuses[0].ready}'` until it returns `true`, ignoring case.
+
+```bash
+watchfor \
+  -c "kubectl get pod my-app-pod -o jsonpath='{.status.containerStatuses[0].ready}'" \
+  -p "true" \
+  --ignore-case \
+  --timeout 2m \
+  --on-fail "echo 'Pod did not become ready in time'; exit 1" \
+  -- echo "Kubernetes pod is ready!"
+```
+
+### 5. Monitor Docker Container Logs for a Specific Error (Regex)
+
+Monitors a Docker container's logs for a specific error pattern, using regex to match variations.
+
+```bash
+watchfor \
+  -c "docker logs my-container" \
+  -p "(ERROR|FAILURE): .* (failed to connect|connection refused)" \
+  --regex \
+  --interval 5s \
+  --max-retries 60 \
+  --on-fail "echo 'Specific error pattern not found in logs'; exit 1" \
+  -- echo "Error pattern detected in Docker logs."
 ```
 
 ## License

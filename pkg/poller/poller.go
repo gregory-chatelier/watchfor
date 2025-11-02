@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"regexp"
 	"time"
 
 	"github.com/gregory-chatelier/watchfor/pkg/watcher"
@@ -12,17 +13,21 @@ import (
 
 // Poller manages the polling loop, checking for a pattern from a watcher.
 type Poller struct {
-	w       watcher.Watcher
-	pattern []byte
-	verbose bool
+	w          watcher.Watcher
+	pattern    string
+	verbose    bool
+	regex      bool
+	ignoreCase bool
 }
 
 // New creates a new Poller.
-func New(w watcher.Watcher, pattern string, verbose bool) *Poller {
+func New(w watcher.Watcher, pattern string, verbose bool, regex bool, ignoreCase bool) *Poller {
 	return &Poller{
-		w:       w,
-		pattern: []byte(pattern),
-		verbose: verbose,
+		w:          w,
+		pattern:    pattern,
+		verbose:    verbose,
+		regex:      regex,
+		ignoreCase: ignoreCase,
 	}
 }
 
@@ -46,7 +51,13 @@ func (p *Poller) Run(ctx context.Context, interval time.Duration, maxRetries int
 			}
 		}
 
-		if bytes.Contains(output, p.pattern) {
+		matched, err := p.match(output)
+		if err != nil {
+			fmt.Printf("Error matching pattern: %v\n", err)
+			return false // Consider this a fatal error
+		}
+
+		if matched {
 			fmt.Println("Pattern found!")
 			return true // Success
 		}
@@ -83,4 +94,20 @@ func (p *Poller) Run(ctx context.Context, interval time.Duration, maxRetries int
 			// Continue to next iteration
 		}
 	}
+}
+
+func (p *Poller) match(output []byte) (bool, error) {
+	if p.regex {
+		pattern := p.pattern
+		if p.ignoreCase {
+			pattern = "(?i)" + pattern
+		}
+		return regexp.Match(pattern, output)
+	}
+
+	if p.ignoreCase {
+		return bytes.Contains(bytes.ToLower(output), bytes.ToLower([]byte(p.pattern))), nil
+	}
+
+	return bytes.Contains(output, []byte(p.pattern)), nil
 }
