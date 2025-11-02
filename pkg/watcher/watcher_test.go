@@ -43,7 +43,7 @@ func TestCommandWatcher_Check_Success(t *testing.T) {
 	// Normalize newlines to accommodate OS differences
 	normalizedOutput := strings.ReplaceAll(string(output), "\r\n", " ")
 	normalizedOutput = strings.ReplaceAll(normalizedOutput, "\n", " ")
-	
+
 	if !strings.Contains(normalizedOutput, "hello world") {
 		t.Errorf("Expected output to contain 'hello world', got: %s", string(output))
 	}
@@ -147,4 +147,3 @@ func TestFileWatcher_Check_Truncation(t *testing.T) {
 		t.Errorf("Expected '%s', got '%s'", expected, string(output))
 	}
 }
-

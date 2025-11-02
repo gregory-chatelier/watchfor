@@ -171,4 +171,3 @@ func TestPoller_Run_Jitter(t *testing.T) {
 		t.Errorf("Expected duration to be between %s and %s, got %s", expectedMinDuration, expectedMaxDuration, duration)
 	}
 }
-
