@@ -14,6 +14,8 @@ import (
 	"github.com/gregory-chatelier/watchfor/pkg/watcher"
 )
 
+var version = "dev" // Default version, will be overwritten by linker
+
 var (
 	// Watch Options
 	command = pflag.StringP("command", "c", "", "The command to execute and inspect.")
@@ -28,8 +30,9 @@ var (
 	failCommand = pflag.String("on-fail", "", "The command to execute if the pattern is not found.")
 
 	// General Options
-	verbose = pflag.BoolP("verbose", "v", false, "Enable verbose logging.")
-	help    = pflag.BoolP("help", "h", false, "Show the help message.")
+	verbose     = pflag.BoolP("verbose", "v", false, "Enable verbose logging.")
+	help        = pflag.BoolP("help", "h", false, "Show the help message.")
+	showVersion = pflag.BoolP("version", "", false, "Show watchfor version.")
 )
 
 func init() {
@@ -37,6 +40,7 @@ func init() {
 		fmt.Fprintf(os.Stderr, "Usage: %s [OPTIONS] -- [SUCCESS_COMMAND]\n\n", os.Args[0])
 		fmt.Fprintln(os.Stderr, "Watchfor is a resilient command orchestrator that polls a command or file until a pattern is found.")
 		fmt.Fprintln(os.Stderr, "It is designed to replace brittle 'sleep' calls in CI/CD and scripting.\n")
+		fmt.Fprintln(os.Stderr, "Version: " + version + "\n")
 		fmt.Fprintln(os.Stderr, "Options:")
 		pflag.PrintDefaults()
 		fmt.Fprintln(os.Stderr, "\nExamples:")
@@ -53,6 +57,11 @@ func main() {
 
 	if *help {
 		pflag.Usage()
+		os.Exit(0)
+	}
+
+	if *showVersion {
+		fmt.Printf("watchfor version %s\n", version)
 		os.Exit(0)
 	}
 
