@@ -152,35 +152,6 @@ script:
       -- echo "✅ Service is active!"
 ```
 
-### 4. Wait for a Kubernetes Pod to be Ready (Regex and Case-Insensitive)
-
-Polls `kubectl get pod <pod-name> -o jsonpath='{.status.containerStatuses[0].ready}'` until it returns `true`, ignoring case.
-
-```bash
-watchfor \
-  -c "kubectl get pod my-app-pod -o jsonpath='{.status.containerStatuses[0].ready}'" \
-  -p "true" \
-  --ignore-case \
-  --timeout 2m \
-  --on-fail "echo 'Pod did not become ready in time'; exit 1" \
-  -- echo "Kubernetes pod is ready!"
-```
-
-### 5. Monitor Docker Container Logs for a Specific Error (Regex)
-
-Monitors a Docker container's logs for a specific error pattern, using regex to match variations.
-
-```bash
-watchfor \
-  -c "docker logs my-container" \
-  -p "(ERROR|FAILURE): .* (failed to connect|connection refused)" \
-  --regex \
-  --interval 5s \
-  --max-retries 60 \
-  --on-fail "echo 'Specific error pattern not found in logs'; exit 1" \
-  -- echo "Error pattern detected in Docker logs."
-```
-
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
